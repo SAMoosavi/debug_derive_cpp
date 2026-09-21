@@ -1,0 +1,7 @@
+# Build output (CMake configure + binaries). The committed build/ dir is only a
+# convenience cache so GTest doesn't need re-fetching; safe to delete.
+build/
+cmake-build-*/
+
+# Single-file probe binaries (use /tmp, never the repo root)
+/tmp/

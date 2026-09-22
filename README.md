@@ -40,7 +40,7 @@ std::string s = to_debug_string(p);
 - **Safety guards** — cycle detection (`<cycle: Type@addr>`) and a nesting
   depth limit (`<recursion limit reached>`), with zero heap allocation during
   traversal.
-- **Tested** — 28 GoogleTest tests, all in the `DebugDeriveTest` suite.
+- **Tested** — 32 GoogleTest tests, all in the `DebugDeriveTest` suite.
 
 ## Requirements
 
@@ -123,6 +123,40 @@ debug_print(p);   // ThirdPartyPoint {\n  x: 10,\n  y: 20\n}
 Explicit listing always wins: `DEBUG_FIELDS(a, b)` on a type with members
 declared `b, a` prints `a` first. A zero-arg macro on a non-aggregate
 compiles but prints `Type {}` — list its fields explicitly instead.
+
+### 2b. Private/protected members (canonical)
+
+```cpp
+#include "debug_derive.hpp"
+
+class A {
+    int a;          // private-implicit
+protected:
+    int b;
+private:
+    int q;
+public:
+    int c;
+    A(int a_, int b_, int q_, int c_) : a(a_), b(b_), q(q_), c(c_) {}
+    DEBUG_FIELDS(a, b, q, c)   // befriends debug_derive::DebugAccess
+};
+
+A v{1, 2, 3, 4};
+debug_print(v);   // A {\n  a: 1,\n  b: 2,\n  q: 3,\n  c: 4\n}
+```
+
+True zero-arg auto-naming of private members is impossible in standard
+C++20/C++23 — always list private fields explicitly. Never
+`#define private public` in the default path (undefined behavior); that
+variant is opt-in only, quarantined to its own translation unit, and never
+enabled by default (see `docs/auto-private-debug.md`).
+
+Debug-only exception: `tests/test_debug_auto_private.cpp` (executable
+`debug_auto_private`, CTest `AutoPrivateDebug`) confines the hack to one TU
+(all includes first, `#ifndef NDEBUG`-gated, popped right after the type
+definitions) so zero-arg `DEBUG_FIELDS()` auto-prints privates in Debug.
+Aggregate-eligible types only — types with a user constructor (like `A`
+above) still need the explicit list; Release falls back to `Type {}`.
 
 ### 3. Enums (opt-in)
 
@@ -212,7 +246,7 @@ clang++ -std=c++20 -Wall -Wextra -pedantic <file>.cpp -o /tmp/<name> && /tmp/<na
 
 `tests/CMakeLists.txt` builds `run_tests` from the files below (linked
 against `debug_derive` and `GTest::gtest_main`, registered as CTest
-`AllTests`). Shared fixtures live in `tests/test_types.hpp`. All 28 tests run
+`AllTests`). Shared fixtures live in `tests/test_types.hpp`. All 32 tests run
 under the `DebugDeriveTest` suite.
 
 | File | Covers (`TEST` names) |
@@ -224,6 +258,7 @@ under the `DebugDeriveTest` suite.
 | `test_containers.cpp` | `ContainersAndVectors`, `MAP`, `Optionals`, `PairsAndTuples` |
 | `test_pointers.cpp` | `RawPointerNullAndScalars`, `RawPointerDerefValues`, `RawPointerUndereferenceable`, `SmartPointerNullAndValue` |
 | `test_auto.cpp` | `AutoIntrusive`, `AutoNonIntrusive`, `AutoWithoutAnyMacro`, `AutoEmpty`, `AutoNestedContainers`, `ExplicitRegistrationTakesPrecedence` |
+| `test_private.cpp` | `PrivateMultiSection`, `NestedPrivate`, `MultiPrimitivePrivate`, `ZeroArgNonAggregateFallback` |
 | `test_templates.cpp` | `TemplateContainerPrimary`, `TemplateContainerStringSpec`, `TemplateContainerIntSpec`, `TemplateContainerNested`, `TemplateContainerSimplePoint` |
 | `test_safety.cpp` | `CycleDetection`, `DepthLimiting` |
 
@@ -286,6 +321,12 @@ aggregate reflection.
   `> >` → `>>`. Template headers such as `Container<std::string, int>` therefore
   render identically on GCC and Clang, and the tests need no per-compiler
   expectations. Unknown spellings pass through untouched.
+- C++20 vs C++23: one header, two standards. Version B (canonical) is this
+  header compiled `-std=c++20`; Version A is the same header compiled
+  `-std=c++23`. C++23 adds no data-member introspection over C++20
+  (P2996 reflection is C++26), so there is no separate code path — private
+  printing stays on the explicit `DEBUG_FIELDS(a, b, q, c)` friend path and
+  auto-discovery stays aggregates-only in both.
 
 ## Project layout
 
@@ -295,7 +336,7 @@ aggregate reflection.
 ├── CMakeLists.txt             # debug_derive INTERFACE target, demo/tests, install + package config
 ├── CMakePresets.json          # gcc-debug / clang-debug presets
 ├── include/
-│   └── debug_derive.hpp       # the entire library (~1590 lines, sections 1–8)
+│   └── debug_derive.hpp       # the entire library (sections 1–9)
 ├── examples/
 │   └── demo.cpp               # behavior demo (builds to ./build/demo)
 └── tests/
@@ -309,8 +350,12 @@ aggregate reflection.
     ├── test_pointers.cpp
     ├── test_auto.cpp
     ├── test_templates.cpp
+    ├── test_private.cpp
     └── test_safety.cpp
 ```
+
+Further reading: `docs/auto-private-debug.md` (private-member canonical form,
+C++20 vs C++23 separation, UB quarantine note).
 
 ## License
 

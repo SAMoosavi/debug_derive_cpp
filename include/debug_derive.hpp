@@ -162,6 +162,13 @@ struct DebugAccess;
  * (real member names, no dependency). Non-aggregates with zero args print
  * as `Type {}` — list their fields explicitly instead.
  *
+ * Private/protected members print via the canonical explicit list: the
+ * macro befriends `debug_derive::DebugAccess`, so `DEBUG_FIELDS(a, b, q, c)`
+ * reaches every access section with no engine change. True zero-arg
+ * auto-naming of privates is impossible in standard C++20/C++23 (see
+ * Section 9). Never `#define private public` in the default path (UB);
+ * that variant is opt-in only, quarantined to its own TU (see docs).
+ *
  * Example:
  *   struct Address {
  *       std::string city;
@@ -1588,3 +1595,16 @@ std::string to_debug_string(const T& val, int indent_size = 2) {
 // Bring primary functions into global or user namespace for convenience
 using debug_derive::debug_print;
 using debug_derive::to_debug_string;
+
+// ============================================================================
+// Section 9: Standard-version separation (Version B C++20 vs Version A C++23)
+// ----------------------------------------------------------------------------
+// This is ONE header for both versions; the versions differ only by the
+// `-std=` flag and compiler floor, not by code path:
+//   - Version B (canonical): compiled `-std=c++20` (GCC 13 / Clang 18 floor).
+//   - Version A: the same header compiled `-std=c++23`.
+// C++23 provides no data-member reflection: P2996 (reflexpr / std::meta) is
+// C++26, so no new introspection is used or gated here. Private-member
+// printing stays on the explicit `DEBUG_FIELDS(a, b, q, c)` friend path in
+// both versions; zero-arg auto-discovery remains aggregates-only.
+// ============================================================================

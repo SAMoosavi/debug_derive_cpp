@@ -167,3 +167,48 @@ static_assert(!debug_derive::IsAutoReflectable<std::vector<int>>);
 static_assert(debug_derive::IsDebugReflectable<AutoUser>);
 static_assert(!debug_derive::IsAutoReflectable<AutoUser>);
 static_assert(!debug_derive::IsAutoReflectable<SimplePoint>);
+
+// Canonical private/protected fixture: int a is private-implicit (class
+// default access), b is protected, q is private, c is public.
+class A {
+    int a;
+protected:
+    int b;
+private:
+    int q;
+public:
+    int c;
+    A(int a_, int b_, int q_, int c_) : a(a_), b(b_), q(q_), c(c_) {}
+    DEBUG_FIELDS(a, b, q, c)
+};
+
+static_assert(debug_derive::IsDebugReflectable<A>);
+static_assert(!debug_derive::IsAutoReflectable<A>);
+
+class NestedPrivateHolder {
+    A inner;
+    int tag;
+public:
+    NestedPrivateHolder(A in, int t) : inner(in), tag(t) {}
+    DEBUG_FIELDS(inner, tag)
+};
+
+class MultiPrimitivePrivate {
+    int i;
+    double d;
+    bool flag;
+    std::string s;
+public:
+    MultiPrimitivePrivate(int i_, double d_, bool f_, std::string s_)
+        : i(i_), d(d_), flag(f_), s(std::move(s_)) {}
+    DEBUG_FIELDS(i, d, flag, s)
+};
+
+class ZeroArgNonAggregate {
+    // ponytail: intentionally unlisted (fallback test) → maybe_unused keeps
+    // -Wunused-private-field clean on Clang.
+    [[maybe_unused]] int x;
+public:
+    explicit ZeroArgNonAggregate(int v) : x(v) {}
+    DEBUG_FIELDS()
+};

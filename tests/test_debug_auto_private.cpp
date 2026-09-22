@@ -80,10 +80,6 @@ TEST(DebugDeriveAutoPrivate, ZeroArgPrintsAllSections) {
 TEST(DebugDeriveAutoPrivate, ZeroArgMultiPrimitive) {
     DebugAutoMulti m{7, 2.5, true, "hi"};
     const std::string out = to_debug_string(m);
-    EXPECT_NE(out.find("i: 7"), std::string::npos);
-    EXPECT_NE(out.find("d: 2.5"), std::string::npos);
-    EXPECT_NE(out.find("flag: true"), std::string::npos);
-    EXPECT_NE(out.find("s: \"hi\""), std::string::npos);
     EXPECT_EQ(out, "DebugAutoMulti {\n  i: 7,\n  d: 2.5,\n  flag: true,\n  s: \"hi\"\n}");
 }
 #else

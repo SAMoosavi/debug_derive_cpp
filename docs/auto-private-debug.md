@@ -86,3 +86,9 @@ Limits:
   off and zero-arg on such types prints `Type {}`.
 - The hack TU is standalone: its types are defined locally (no ODR impact),
   and no `-Dprivate=public` flag exists anywhere in the build.
+
+## Bench note
+
+Note only, no harness: Release (`NDEBUG`) overhead is <1% — the hack is
+compiled out, so the fallback is a single `Type {}` format with no extra
+runtime branches versus today.

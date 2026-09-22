@@ -258,3 +258,29 @@ public:
     explicit ZeroArgNonAggregate(int v) : x(v) {}
     DEBUG_FIELDS()
 };
+
+// Private holder over a shared subtree: exercises private dispatch through
+// the cycle-128 / depth-32 guards with zero new engine code.
+class PrivateCycleHolder {
+    std::shared_ptr<CyclicNode> node;
+public:
+    explicit PrivateCycleHolder(std::shared_ptr<CyclicNode> n) : node(std::move(n)) {}
+    DEBUG_FIELDS(node)
+};
+
+// Non-aggregate, unregistered, unstreamable → runtime `<unformattable T>`.
+struct Unprintable {
+    Unprintable(int v_) : value(v_) {}
+private:
+    // ponytail: never read (fallback prints the marker) → maybe_unused keeps
+    // -Wunused-private-field clean on Clang.
+    [[maybe_unused]] int value;
+};
+
+class PrivateUnformattableHolder {
+    Unprintable inner;
+    int tag;
+public:
+    PrivateUnformattableHolder(Unprintable in, int t) : inner(in), tag(t) {}
+    DEBUG_FIELDS(inner, tag)
+};

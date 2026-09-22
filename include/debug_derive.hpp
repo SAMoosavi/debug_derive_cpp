@@ -1380,6 +1380,35 @@ void format_tuple_impl(const Tuple& tup, DebugContext& ctx, std::index_sequence<
     ctx.os.put(')');
 }
 
+// ponytail: one struct-body printer shared by explicit + auto dispatch (byte-identical).
+template <typename VisitFn>
+inline void print_struct_body(std::string_view type_name, VisitFn&& visit, DebugContext& ctx) {
+    ctx.os << type_name << " {";
+    bool has_fields = false;
+    ctx.indent_level++;
+    ctx.current_depth++;
+
+    visit([&](std::string_view field_name, const auto& field_val) {
+        if (has_fields) {
+            ctx.os << ",\n";
+        } else {
+            ctx.os.put('\n');
+            has_fields = true;
+        }
+        ctx.write_indent();
+        ctx.os << field_name << ": ";
+        debug_print_value(field_val, ctx);
+    });
+
+    ctx.current_depth--;
+    ctx.indent_level--;
+    if (has_fields) {
+        ctx.os.put('\n');
+        ctx.write_indent();
+    }
+    ctx.os.put('}');
+}
+
 /**
  * @brief Recursive print engine: dispatches on concepts (scalars, strings,
  *        optionals, pointers, pairs/tuples, reflected structs, containers,
@@ -1477,55 +1506,11 @@ void debug_print_value(const T& val, DebugContext& ctx) {
         format_tuple_impl(val, ctx, std::make_index_sequence<std::tuple_size_v<CleanT>>{});
         ctx.current_depth--;
     } else if constexpr (IsDebugReflectable<CleanT>) {
-        ctx.os << resolve_type_name<CleanT>() << " {";
-        bool has_fields = false;
-        ctx.indent_level++;
-        ctx.current_depth++;
-
-        DebugAccess::reflect(val, [&](std::string_view field_name, const auto& field_val) {
-            if (has_fields) {
-                ctx.os << ",\n";
-            } else {
-                ctx.os.put('\n');
-                has_fields = true;
-            }
-            ctx.write_indent();
-            ctx.os << field_name << ": ";
-            debug_print_value(field_val, ctx);
-        });
-
-        ctx.current_depth--;
-        ctx.indent_level--;
-        if (has_fields) {
-            ctx.os.put('\n');
-            ctx.write_indent();
-        }
-        ctx.os.put('}');
+        print_struct_body(resolve_type_name<CleanT>(),
+                          [&](auto&& emit) { DebugAccess::reflect(val, emit); }, ctx);
     } else if constexpr (IsAutoReflectable<CleanT>) {
-        ctx.os << resolve_type_name<CleanT>() << " {";
-        bool has_fields = false;
-        ctx.indent_level++;
-        ctx.current_depth++;
-
-        detail::auto_impl::visit_auto(val, [&](std::string_view field_name, const auto& field_val) {
-            if (has_fields) {
-                ctx.os << ",\n";
-            } else {
-                ctx.os.put('\n');
-                has_fields = true;
-            }
-            ctx.write_indent();
-            ctx.os << field_name << ": ";
-            debug_print_value(field_val, ctx);
-        });
-
-        ctx.current_depth--;
-        ctx.indent_level--;
-        if (has_fields) {
-            ctx.os.put('\n');
-            ctx.write_indent();
-        }
-        ctx.os.put('}');
+        print_struct_body(resolve_type_name<CleanT>(),
+                          [&](auto&& emit) { detail::auto_impl::visit_auto(val, emit); }, ctx);
     } else if constexpr (IsContainer<CleanT>) {
         auto it = std::begin(val);
         auto end = std::end(val);

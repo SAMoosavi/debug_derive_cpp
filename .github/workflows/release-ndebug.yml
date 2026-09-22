@@ -1,0 +1,15 @@
+name: Release NDEBUG
+
+on: [push, pull_request]
+
+jobs:
+  release-ndebug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Release
+        run: cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
+      - name: Build debug_auto_private
+        run: cmake --build build/release --target debug_auto_private
+      - name: Verify Release fallback (Type {})
+        run: ./build/release/debug_auto_private --gtest_filter='DebugDeriveAutoPrivate.ReleaseFallbackDocumentsNoOp'

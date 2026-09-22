@@ -94,6 +94,21 @@ struct Node {
 };
 
 // ============================================================================
+// Example 7: Automatic Recursive Fallback (bare aggregate, no macro)
+// ============================================================================
+
+struct BareInnerDemo {
+    int v;
+}; // No DEBUG_FIELDS: printed via the generic auto fallback.
+
+struct OuterWithBare {
+    BareInnerDemo inner;
+    int n;
+
+    DEBUG_FIELDS(inner, n)
+};
+
+// ============================================================================
 // Main Demonstration
 // ============================================================================
 
@@ -169,6 +184,11 @@ int main() {
     std::string serialized = to_debug_string(user);
     std::cout << "Stored in std::string (length " << serialized.size() << " bytes):\n"
               << serialized << "\n";
+
+    // 10. Automatic recursive fallback (explicit parent, bare nested child)
+    std::cout << "\n--- 10. Nested Auto Fallback (no macro on inner type) ---\n";
+    OuterWithBare fallback_demo{{7}, 9};
+    debug_print(fallback_demo);
 
     return 0;
 }

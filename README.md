@@ -40,7 +40,7 @@ std::string s = to_debug_string(p);
 - **Safety guards** — cycle detection (`<cycle: Type@addr>`) and a nesting
   depth limit (`<recursion limit reached>`), with zero heap allocation during
   traversal.
-- **Tested** — 28 GoogleTest tests, all in the `DebugDeriveTest` suite.
+- **Tested** — 33 GoogleTest tests, all in the `DebugDeriveTest` suite.
 
 ## Requirements
 
@@ -212,7 +212,7 @@ clang++ -std=c++20 -Wall -Wextra -pedantic <file>.cpp -o /tmp/<name> && /tmp/<na
 
 `tests/CMakeLists.txt` builds `run_tests` from the files below (linked
 against `debug_derive` and `GTest::gtest_main`, registered as CTest
-`AllTests`). Shared fixtures live in `tests/test_types.hpp`. All 28 tests run
+`AllTests`). Shared fixtures live in `tests/test_types.hpp`. All 33 tests run
 under the `DebugDeriveTest` suite.
 
 | File | Covers (`TEST` names) |
@@ -223,7 +223,7 @@ under the `DebugDeriveTest` suite.
 | `test_structs.cpp` | `EmptyStructs`, `NestedStructs`, `DeeplyNestedStructures`, `PrivateMembers` |
 | `test_containers.cpp` | `ContainersAndVectors`, `MAP`, `Optionals`, `PairsAndTuples` |
 | `test_pointers.cpp` | `RawPointerNullAndScalars`, `RawPointerDerefValues`, `RawPointerUndereferenceable`, `SmartPointerNullAndValue` |
-| `test_auto.cpp` | `AutoIntrusive`, `AutoNonIntrusive`, `AutoWithoutAnyMacro`, `AutoEmpty`, `AutoNestedContainers`, `ExplicitRegistrationTakesPrecedence` |
+| `test_auto.cpp` | `AutoIntrusive`, `AutoNonIntrusive`, `AutoWithoutAnyMacro`, `AutoEmpty`, `AutoNestedContainers`, `ExplicitRegistrationTakesPrecedence`, `NestedPrimitiveMember`, `NestedWithExplicitDebug`, `NestedWithoutDebug`, `ThreeLevelNesting`, `MixedPrimitiveAndUserDefined` |
 | `test_templates.cpp` | `TemplateContainerPrimary`, `TemplateContainerStringSpec`, `TemplateContainerIntSpec`, `TemplateContainerNested`, `TemplateContainerSimplePoint` |
 | `test_safety.cpp` | `CycleDetection`, `DepthLimiting` |
 
@@ -262,7 +262,10 @@ unregistered → `TypeName(underlying_value)` (e.g. `TestDirection(0)`).
 
 **Fallbacks:** types with `operator<<` print through it; anything else prints
 `<unformattable TypeName>`. Explicit reflection is tried before automatic
-aggregate reflection.
+aggregate reflection, and bare aggregates nested in explicit parents recurse
+generically with identical formatting. `uses_generic_auto_v<T>` is an opt-in
+compile-time notice naming types that rely on the generic auto path
+(see `docs/automatic-nested.md`).
 
 **Hard limits (by design):**
 

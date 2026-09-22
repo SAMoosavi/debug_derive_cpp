@@ -159,7 +159,53 @@ struct ExplicitOrder {
     DEBUG_FIELDS(a, b)
 };
 
-static_assert(debug_derive::IsAutoReflectable<BareAuto>);
+// Feature 2: automatic recursive fallback — bare aggregates nested in
+// explicit parents (no macro on the nested type, no per-type duplication).
+struct BareInner {
+    int v;
+};
+
+struct BareHolder {
+    AddressTest addr;
+    int tag;
+};
+
+struct ExplicitOuter {
+    BareInner inner;
+    int n;
+    DEBUG_FIELDS(inner, n)
+};
+
+struct MixedNested {
+    int id;
+    std::string name;
+    BareInner inner;
+    AddressTest addr;
+    DEBUG_FIELDS(id, name, inner, addr)
+};
+
+struct BareLevel3 {
+    int z;
+};
+
+struct BareLevel2 {
+    BareLevel3 c;
+    int y;
+};
+
+struct ExplicitLevel1 {
+    BareLevel2 b;
+    int x;
+    DEBUG_FIELDS(b, x)
+};
+
+static_assert(debug_derive::IsAutoReflectable<BareInner>);
+static_assert(!debug_derive::IsDebugReflectable<BareInner>);
+static_assert(debug_derive::uses_generic_auto_v<BareInner>);
+static_assert(debug_derive::uses_generic_auto_v<const BareInner&>);
+static_assert(!debug_derive::uses_generic_auto_v<SimplePoint>);
+static_assert(!debug_derive::uses_generic_auto_v<ExplicitOuter>);
+static_assert(!debug_derive::uses_generic_auto_v<int>);
 static_assert(!debug_derive::IsAutoReflectable<EncapsulatedData>);
 static_assert(!debug_derive::IsAutoReflectable<std::vector<int>>);
 // Empty DEBUG_FIELDS() registers an explicit reflector that forwards to the

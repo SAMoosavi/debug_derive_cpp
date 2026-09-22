@@ -60,3 +60,76 @@ TEST(DebugDeriveTest, ExplicitRegistrationTakesPrecedence) {
     ExplicitOrder e{1, 2}; // declaration order: b = 1, a = 2
     EXPECT_EQ(to_debug_string(e), "ExplicitOrder {\n  a: 2,\n  b: 1\n}");
 }
+
+// Feature 2: automatic recursive fallback — explicit parent, auto child.
+// 19. Primitive member through the generic auto path (no macro on BareInner)
+TEST(DebugDeriveTest, NestedPrimitiveMember) {
+    EXPECT_EQ(to_debug_string(BareInner{42}), "BareInner {\n  v: 42\n}");
+}
+
+// 20. Nested type WITH explicit DEBUG inside an auto parent: byte-identical
+// to its standalone explicit format.
+TEST(DebugDeriveTest, NestedWithExplicitDebug) {
+    BareHolder h{{"Oslo", 500}, 7};
+    std::string expected =
+        "BareHolder {\n"
+        "  addr: AddressTest {\n"
+        "    city: \"Oslo\",\n"
+        "    zip: 500\n"
+        "  },\n"
+        "  tag: 7\n"
+        "}";
+    EXPECT_EQ(to_debug_string(h), expected);
+}
+
+// 21. Nested type WITHOUT any DEBUG (public aggregate) inside an explicit
+// parent: generic auto recursion, same format.
+TEST(DebugDeriveTest, NestedWithoutDebug) {
+    ExplicitOuter o{{7}, 9};
+    std::string expected =
+        "ExplicitOuter {\n"
+        "  inner: BareInner {\n"
+        "    v: 7\n"
+        "  },\n"
+        "  n: 9\n"
+        "}";
+    EXPECT_EQ(to_debug_string(o), expected);
+}
+
+// 22. Three-level nesting: explicit -> bare -> bare.
+TEST(DebugDeriveTest, ThreeLevelNesting) {
+    ExplicitLevel1 root{{{{5}}, 6}, 7};
+    std::string expected =
+        "ExplicitLevel1 {\n"
+        "  b: BareLevel2 {\n"
+        "    c: BareLevel3 {\n"
+        "      z: 5\n"
+        "    },\n"
+        "    y: 6\n"
+        "  },\n"
+        "  x: 7\n"
+        "}";
+    EXPECT_EQ(to_debug_string(root), expected);
+}
+
+// 23. Mixed primitive + bare + explicit members; const/ref/value identical.
+TEST(DebugDeriveTest, MixedPrimitiveAndUserDefined) {
+    MixedNested m{1, "Li", {2}, {"Oslo", 500}};
+    std::string expected =
+        "MixedNested {\n"
+        "  id: 1,\n"
+        "  name: \"Li\",\n"
+        "  inner: BareInner {\n"
+        "    v: 2\n"
+        "  },\n"
+        "  addr: AddressTest {\n"
+        "    city: \"Oslo\",\n"
+        "    zip: 500\n"
+        "  }\n"
+        "}";
+    const MixedNested& cref = m;
+    EXPECT_EQ(to_debug_string(m), expected);
+    EXPECT_EQ(to_debug_string(cref), expected);
+    MixedNested copy = m;
+    EXPECT_EQ(to_debug_string(copy), expected);
+}

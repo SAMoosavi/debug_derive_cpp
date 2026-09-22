@@ -599,6 +599,21 @@ concept IsAutoReflectable =
     !IsSmartPointer<T> && !IsRawPointer<T> && !IsContainer<T> &&
     !IsEnum<T> && !IsDebugReflectable<T>;
 
+/**
+ * @brief Opt-in compile-time notice: true when T prints through the generic
+ *        auto fallback (nested without explicit DEBUG).
+ *
+ * Use as `static_assert(!debug_derive::uses_generic_auto_v<MyType>)` to get a
+ * compiler message naming each type that relies on automatic recursion, or
+ * `static_assert(debug_derive::uses_generic_auto_v<T>)` to pin the fallback.
+ * Unsupported types (non-aggregate, unregistered) instead print the runtime
+ * marker `<unformattable TypeName>`, which likewise names the type.
+ */
+// ponytail: queryable trait, not a per-instantiation #pragma/[[deprecated]]
+// hook — those either fire unconditionally or break -Wall -Wextra -pedantic.
+template <typename T>
+constexpr bool uses_generic_auto_v = IsAutoReflectable<std::remove_cvref_t<T>>;
+
 // ============================================================================
 // Section 4b: Automatic Aggregate Reflection (zero-argument discovery)
 // ----------------------------------------------------------------------------
@@ -1364,8 +1379,12 @@ void format_tuple_impl(const Tuple& tup, DebugContext& ctx, std::index_sequence<
  *        enums) in precedence order.
  *
  * Explicit reflection (IsDebugReflectable) is tried before automatic
- * aggregate reflection (IsAutoReflectable). Fallback: types with an
- * `operator<<` print via that operator; otherwise prints
+ * aggregate reflection (IsAutoReflectable), so nested types recurse with no
+ * per-type code: with-DEBUG nests print byte-identical to standalone, bare
+ * aggregates recurse generically, and the single generic path reuses the
+ * depth-32 / cycle-128 guards with const/ref/value preserved. Compile-time
+ * notice for the auto path: `uses_generic_auto_v<T>`. Fallback: types with
+ * an `operator<<` print via that operator; otherwise prints
  * `<unformattable TypeName>`.
  */
 template <typename T>

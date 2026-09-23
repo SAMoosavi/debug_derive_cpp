@@ -4,9 +4,9 @@ on: [push, pull_request]
 
 jobs:
   release-ndebug:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure Release
         run: cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
       - name: Build debug_auto_private
